@@ -1,3 +1,4 @@
+using System;
 using NESMusicEditor.Models;
 
 namespace NESMusicEditor.Controls.Rendering;
@@ -41,6 +42,29 @@ public static class MeasureLayout
         int steps = noteDiatonic - centerLineDiatonic;
         // each step = half line spacing
         return centerLineY - steps * (LineSpacing / 2.0);
+    }
+
+    // Inverse of GetNoteY: given a Y pixel, return closest MIDI note
+    public static int GetMidiNoteFromY(double y, ClefType clef, double staffTopY)
+    {
+        int centerLineDiatonic = clef == ClefType.Alto
+            ? (3 * 7 + 4)  // G3
+            : (4 * 7 + 6); // B4
+
+        double centerLineY = staffTopY + LineSpacing * 2;
+        // each half line-spacing = one diatonic step
+        double steps = (centerLineY - y) / (LineSpacing / 2.0);
+        int diatonic = centerLineDiatonic + (int)Math.Round(steps);
+
+        // Convert diatonic step back to MIDI note (natural — no accidental yet)
+        int octave = diatonic / 7;
+        int dia = diatonic % 7;
+        if (dia < 0) { dia += 7; octave--; }
+        // diatonic pitch classes: C=0, D=2, E=4, F=5, G=7, A=9, B=11
+        int[] diaToChromatic = { 0, 2, 4, 5, 7, 9, 11 };
+        int pc = diaToChromatic[dia];
+        // octave in MIDI: C4=60 means octave=4, but formula: midi = (octave+1)*12 + pc
+        return (octave + 1) * 12 + pc;
     }
 
     public static double GetBeatX(int measure, int beat, int beatsPerMeasure, double pixelsPerBeat,

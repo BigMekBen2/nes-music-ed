@@ -153,16 +153,24 @@
                     <ComboBoxItem>B4</ComboBoxItem>
                 </ComboBox>
 
-                <!-- Duration -->
+                <!-- Duration + Note/Rest mode -->
                 <Label Grid.Row="2" Grid.Column="3" Content="Duration:"/>
-                <ComboBox x:Name="DurationCombo" Grid.Row="2" Grid.Column="4" SelectedIndex="2"
-                          SelectionChanged="DurationCombo_SelectionChanged">
-                    <ComboBoxItem>Whole</ComboBoxItem>
-                    <ComboBoxItem>Half</ComboBoxItem>
-                    <ComboBoxItem>Quarter</ComboBoxItem>
-                    <ComboBoxItem>Eighth</ComboBoxItem>
-                    <ComboBoxItem>16th</ComboBoxItem>
-                </ComboBox>
+                <StackPanel Grid.Row="2" Grid.Column="4" Orientation="Horizontal">
+                    <ComboBox x:Name="DurationCombo" SelectedIndex="2" Width="68"
+                              SelectionChanged="DurationCombo_SelectionChanged">
+                        <ComboBoxItem>Whole</ComboBoxItem>
+                        <ComboBoxItem>Half</ComboBoxItem>
+                        <ComboBoxItem>Quarter</ComboBoxItem>
+                        <ComboBoxItem>Eighth</ComboBoxItem>
+                        <ComboBoxItem>16th</ComboBoxItem>
+                    </ComboBox>
+                    <RadioButton x:Name="ModeNote" Content="[NOTE]" IsChecked="True"
+                                 Checked="NoteMode_Checked" Tag="note" Margin="6,0,0,0"
+                                 VerticalAlignment="Center"/>
+                    <RadioButton x:Name="ModeRest" Content="[REST]"
+                                 Checked="NoteMode_Checked" Tag="rest" Margin="4,0,0,0"
+                                 VerticalAlignment="Center"/>
+                </StackPanel>
 
                 <!-- Instrument -->
                 <Label Grid.Row="2" Grid.Column="6" Content="Instrument:"/>

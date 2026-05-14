@@ -1,8 +1,12 @@
+using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using NESMusicEditor.Controls;
 using NESMusicEditor.Controls.Rendering;
+using NESMusicEditor.Editing;
 using NESMusicEditor.Models;
 
 namespace NESMusicEditor;
@@ -10,12 +14,18 @@ namespace NESMusicEditor;
 public partial class MainWindow : Window
 {
     private readonly Song _song;
+    private readonly UndoRedoManager _undo = new();
+    private bool _isPlaying;
+    private bool _isRestMode;
+
+    private StaffCanvas[] AllStaves => new[] { StaffSquare1, StaffSquare2, StaffTriangle, StaffNoise };
 
     public MainWindow()
     {
         InitializeComponent();
-        _song = CreateDemoSong();
+        _song = CreateSong();
         WireSong();
+        this.Focus();
     }
 
     private void WireSong()
@@ -26,61 +36,230 @@ public partial class MainWindow : Window
         StaffNoise.Song = _song;
 
         StaffTriangle.ClefType = ClefType.Alto;
+
+        foreach (var staff in AllStaves)
+        {
+            var capturedStaff = staff;
+            capturedStaff.NoteClicked += (m, b, midi, dur, acc, isRest)
+                => PlaceNote(capturedStaff, m, b, midi, dur, acc, isRest);
+            capturedStaff.NoteRightClicked += (m, b)
+                => OnStaffNoteRightClicked(capturedStaff, m, b);
+        }
     }
 
-    private static Song CreateDemoSong()
+    private static Song CreateSong()
     {
-        var song = new Song { Title = "Demo" };
+        var song = new Song { Title = "Untitled" };
 
-        // Track 0: Square 1 — treble, variety of note durations + accidentals + ledger line
-        var sq1 = new TrackWithNotes { ChannelIndex = 0, ChannelName = "Square 1", Clef = ClefType.Treble };
-        sq1.OrderList.Add(0);
-        // Measure 0: C4 whole, E4 half, G4 quarter, B4 quarter
-        sq1.DemoNotes.Add(new DemoNote(0, 0, 60, NoteDuration.Whole));    // C4
-        sq1.DemoNotes.Add(new DemoNote(0, 1, 64, NoteDuration.Half));     // E4
-        sq1.DemoNotes.Add(new DemoNote(0, 2, 67, NoteDuration.Quarter));  // G4
-        sq1.DemoNotes.Add(new DemoNote(0, 3, 71, NoteDuration.Quarter));  // B4
-        // Measure 1: D5 eighth, F#4 quarter(sharp), Bb4 quarter(flat), C6 ledger
-        sq1.DemoNotes.Add(new DemoNote(1, 0, 74, NoteDuration.Eighth));   // D5
-        sq1.DemoNotes.Add(new DemoNote(1, 1, 66, NoteDuration.Quarter, 1));  // F#4 sharp
-        sq1.DemoNotes.Add(new DemoNote(1, 2, 70, NoteDuration.Quarter, -1)); // Bb4 flat
-        sq1.DemoNotes.Add(new DemoNote(1, 3, 84, NoteDuration.Sixteenth)); // C6 (ledger line above)
+        string[] names = { "Square 1", "Square 2", "Triangle", "Noise" };
+        ClefType[] clefs = { ClefType.Treble, ClefType.Treble, ClefType.Alto, ClefType.Treble };
 
-        // Track 1: Square 2 — treble, simple melody
-        var sq2 = new TrackWithNotes { ChannelIndex = 1, ChannelName = "Square 2", Clef = ClefType.Treble };
-        sq2.DemoNotes.Add(new DemoNote(0, 0, 67, NoteDuration.Quarter));  // G4
-        sq2.DemoNotes.Add(new DemoNote(0, 1, 69, NoteDuration.Quarter));  // A4
-        sq2.DemoNotes.Add(new DemoNote(0, 2, 71, NoteDuration.Half));     // B4
-        sq2.DemoNotes.Add(new DemoNote(1, 0, 72, NoteDuration.Whole));    // C5
+        for (int i = 0; i < 4; i++)
+        {
+            var track = new NESMusicEditor.Models.Track { ChannelIndex = i, ChannelName = names[i], Clef = clefs[i] };
+            track.OrderList.Add(i);
+            song.Tracks.Add(track);
 
-        // Track 2: Triangle — alto clef, lower notes
-        var tri = new TrackWithNotes { ChannelIndex = 2, ChannelName = "Triangle", Clef = ClefType.Alto };
-        tri.DemoNotes.Add(new DemoNote(0, 0, 48, NoteDuration.Whole));    // C3
-        tri.DemoNotes.Add(new DemoNote(0, 2, 52, NoteDuration.Half));     // E3
-        tri.DemoNotes.Add(new DemoNote(1, 0, 55, NoteDuration.Quarter));  // G3
-        tri.DemoNotes.Add(new DemoNote(1, 1, 57, NoteDuration.Eighth));   // A3
-        tri.DemoNotes.Add(new DemoNote(1, 2, 59, NoteDuration.Quarter, 1)); // B3 sharp
-
-        // Track 3: Noise — treble, sparse
-        var noise = new TrackWithNotes { ChannelIndex = 3, ChannelName = "Noise", Clef = ClefType.Treble };
-        noise.DemoNotes.Add(new DemoNote(0, 0, 60, NoteDuration.Quarter));
-        noise.DemoNotes.Add(new DemoNote(0, 2, 60, NoteDuration.Quarter));
-        noise.DemoNotes.Add(new DemoNote(1, 0, 60, NoteDuration.Quarter));
-        noise.DemoNotes.Add(new DemoNote(1, 2, 60, NoteDuration.Eighth));
-
-        song.Tracks.Add(sq1);
-        song.Tracks.Add(sq2);
-        song.Tracks.Add(tri);
-        song.Tracks.Add(noise);
+            var pattern = new Pattern { PatternId = i, TrackIndex = i, RowCount = 64 };
+            // Pre-fill 64 empty rows
+            for (int r = 0; r < 64; r++)
+                pattern.Rows.Add(new PatternRow());
+            song.Patterns.Add(pattern);
+        }
 
         return song;
     }
+
+    // ── Note placement ────────────────────────────────────────────────────────
+
+    private void PlaceNote(StaffCanvas staff, int measure, int beat, int midiNote,
+        NoteDuration duration, int accidental, bool isRest)
+    {
+        int ti = staff.TrackIndex;
+        var pattern = _song.Patterns.Find(p => p.TrackIndex == ti && _song.Tracks[ti].OrderList.Contains(p.PatternId));
+        if (pattern == null) return;
+
+        int rowIndex = measure * staff.BeatsPerMeasure + beat;
+        if (rowIndex >= pattern.Rows.Count) return;
+
+        var row = pattern.Rows[rowIndex];
+
+        // Snapshot old cell for undo
+        PatternCell? oldCell = row.Cells.Count > 0 ? row.Cells[0] : null;
+        PatternCell? oldCellCopy = oldCell == null ? null : new PatternCell
+        {
+            Note = oldCell.Note,
+            Octave = oldCell.Octave,
+            InstrumentId = oldCell.InstrumentId,
+            Volume = oldCell.Volume,
+            Effects = new Dictionary<int, int>(oldCell.Effects)
+        };
+
+        _undo.Execute(
+            () =>
+            {
+                SetCell(pattern, rowIndex, midiNote, duration, accidental, isRest);
+                staff.InvalidateVisual();
+            },
+            () =>
+            {
+                RestoreCell(pattern, rowIndex, oldCellCopy);
+                staff.InvalidateVisual();
+            });
+    }
+
+    private static void SetCell(Pattern pattern, int rowIndex, int midiNote, NoteDuration duration,
+        int accidental, bool isRest)
+    {
+        var row = pattern.Rows[rowIndex];
+        PatternCell cell;
+        if (row.Cells.Count == 0)
+        {
+            cell = new PatternCell();
+            row.Cells.Add(cell);
+        }
+        else
+        {
+            cell = row.Cells[0];
+        }
+
+        if (isRest)
+        {
+            cell.Note = -2;
+            cell.Octave = 4;
+        }
+        else
+        {
+            // Decompose midiNote into pc + octave (FamiTracker style: octave = midi/12 - 1)
+            int octave = midiNote / 12 - 1;
+            int pc = midiNote % 12;
+            cell.Note = pc;
+            cell.Octave = octave;
+        }
+
+        cell.Effects[999] = (int)duration;
+        if (accidental != 0)
+            cell.Effects[998] = accidental;
+        else
+            cell.Effects.Remove(998);
+    }
+
+    private static void RestoreCell(Pattern pattern, int rowIndex, PatternCell? saved)
+    {
+        var row = pattern.Rows[rowIndex];
+        row.Cells.Clear();
+        if (saved != null)
+            row.Cells.Add(saved);
+    }
+
+    private void DeleteNoteAt(StaffCanvas staff, int measure, int beat)
+    {
+        int ti = staff.TrackIndex;
+        var pattern = _song.Patterns.Find(p => p.TrackIndex == ti && _song.Tracks[ti].OrderList.Contains(p.PatternId));
+        if (pattern == null) return;
+
+        int rowIndex = measure * staff.BeatsPerMeasure + beat;
+        if (rowIndex >= pattern.Rows.Count) return;
+
+        var row = pattern.Rows[rowIndex];
+        if (row.Cells.Count == 0) return;
+
+        var cellCopy = new PatternCell
+        {
+            Note = row.Cells[0].Note,
+            Octave = row.Cells[0].Octave,
+            InstrumentId = row.Cells[0].InstrumentId,
+            Volume = row.Cells[0].Volume,
+            Effects = new Dictionary<int, int>(row.Cells[0].Effects)
+        };
+
+        _undo.Execute(
+            () =>
+            {
+                pattern.Rows[rowIndex].Cells.Clear();
+                staff.InvalidateVisual();
+            },
+            () =>
+            {
+                RestoreCell(pattern, rowIndex, cellCopy);
+                staff.InvalidateVisual();
+            });
+    }
+
+    // ── Keyboard hotkeys ──────────────────────────────────────────────────────
+
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        base.OnPreviewKeyDown(e);
+
+        bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
+        bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
+
+        if (ctrl && e.Key == Key.Z) { _undo.Undo(); foreach (var s in AllStaves) s.InvalidateVisual(); e.Handled = true; return; }
+        if (ctrl && e.Key == Key.Y) { _undo.Redo(); foreach (var s in AllStaves) s.InvalidateVisual(); e.Handled = true; return; }
+        if (ctrl && shift && e.Key == Key.Z) { _undo.Redo(); foreach (var s in AllStaves) s.InvalidateVisual(); e.Handled = true; return; }
+
+        switch (e.Key)
+        {
+            case Key.D1: SetDuration(NoteDuration.Whole); e.Handled = true; break;
+            case Key.D2: SetDuration(NoteDuration.Half); e.Handled = true; break;
+            case Key.D3: SetDuration(NoteDuration.Quarter); e.Handled = true; break;
+            case Key.D4: SetDuration(NoteDuration.Eighth); e.Handled = true; break;
+            case Key.D5: SetDuration(NoteDuration.Sixteenth); e.Handled = true; break;
+
+            case Key.Up when shift: SetAccidental(1); e.Handled = true; break;
+            case Key.Down when shift: SetAccidental(-1); e.Handled = true; break;
+            case Key.D0:
+            case Key.N: SetAccidental(0); e.Handled = true; break;
+
+            case Key.Space:
+                _isPlaying = !_isPlaying;
+                e.Handled = true;
+                break;
+
+            case Key.Delete:
+            case Key.Back:
+                DeleteAtLastClicked();
+                e.Handled = true;
+                break;
+        }
+    }
+
+    private void SetDuration(NoteDuration d)
+    {
+        DurationCombo.SelectedIndex = (int)d;
+        foreach (var s in AllStaves) s.CurrentDuration = d;
+    }
+
+    private void SetAccidental(int acc)
+    {
+        foreach (var s in AllStaves) s.CurrentAccidental = acc;
+        AccNatural.IsChecked = acc == 0;
+        AccSharp.IsChecked = acc == 1;
+        AccFlat.IsChecked = acc == -1;
+    }
+
+    private void DeleteAtLastClicked()
+    {
+        // Find whichever staff was last interacted with — try all
+        foreach (var staff in AllStaves)
+        {
+            var (m, b) = staff.LastClickedPos;
+            if (m >= 0 && b >= 0)
+            {
+                DeleteNoteAt(staff, m, b);
+                break;
+            }
+        }
+    }
+
+    // ── UI event handlers ─────────────────────────────────────────────────────
 
     private void DurationCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (StaffSquare1 == null) return;
         var duration = (NoteDuration)DurationCombo.SelectedIndex;
-        foreach (var staff in new[] { StaffSquare1, StaffSquare2, StaffTriangle, StaffNoise })
+        foreach (var staff in AllStaves)
             staff.CurrentDuration = duration;
     }
 
@@ -89,10 +268,22 @@ public partial class MainWindow : Window
         if (StaffSquare1 == null) return;
         if (sender is not ToggleButton rb || rb.Tag is not string tag) return;
         int accidental = int.Parse(tag);
-        foreach (var staff in new[] { StaffSquare1, StaffSquare2, StaffTriangle, StaffNoise })
+        foreach (var staff in AllStaves)
             staff.CurrentAccidental = accidental;
+    }
+
+    private void NoteMode_Checked(object sender, RoutedEventArgs e)
+    {
+        if (StaffSquare1 == null) return;
+        if (sender is not ToggleButton rb || rb.Tag is not string tag) return;
+        _isRestMode = tag == "rest";
+        foreach (var staff in AllStaves)
+            staff.IsRestMode = _isRestMode;
     }
 
     private void Menu_Stub(object sender, RoutedEventArgs e) { }
     private void Toolbar_Stub(object sender, RoutedEventArgs e) { }
+
+    private void OnStaffNoteRightClicked(StaffCanvas staff, int measure, int beat)
+        => DeleteNoteAt(staff, measure, beat);
 }

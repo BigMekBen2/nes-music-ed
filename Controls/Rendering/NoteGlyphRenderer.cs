@@ -138,6 +138,42 @@ public static class NoteGlyphRenderer
         // natural = 0, draw nothing extra (already cleared)
     }
 
+    public static void DrawRest(DrawingContext dc, double x, double y, NoteDuration duration, Pen pen)
+    {
+        switch (duration)
+        {
+            case NoteDuration.Whole:
+                // filled rect hanging below a line
+                dc.DrawRectangle(NoteWhite, null, new Rect(x - 5, y, 10, 4));
+                dc.DrawLine(pen, new Point(x - 7, y - 1), new Point(x + 7, y - 1));
+                break;
+            case NoteDuration.Half:
+                // filled rect sitting on top of a line
+                dc.DrawRectangle(NoteWhite, null, new Rect(x - 5, y - 4, 10, 4));
+                dc.DrawLine(pen, new Point(x - 7, y), new Point(x + 7, y));
+                break;
+            case NoteDuration.Quarter:
+                // zigzag
+                dc.DrawLine(pen, new Point(x, y - 8), new Point(x + 4, y - 4));
+                dc.DrawLine(pen, new Point(x + 4, y - 4), new Point(x - 2, y));
+                dc.DrawLine(pen, new Point(x - 2, y), new Point(x + 2, y + 4));
+                dc.DrawLine(pen, new Point(x + 2, y + 4), new Point(x - 1, y + 8));
+                break;
+            case NoteDuration.Eighth:
+                // diagonal slash + small circle at top
+                dc.DrawLine(pen, new Point(x - 3, y + 8), new Point(x + 3, y - 8));
+                dc.DrawEllipse(NoteWhite, null, new Point(x + 3, y - 8), 2.5, 2.5);
+                break;
+            case NoteDuration.Sixteenth:
+                // two slashes + two circles
+                dc.DrawLine(pen, new Point(x - 3, y + 8), new Point(x + 3, y - 8));
+                dc.DrawEllipse(NoteWhite, null, new Point(x + 3, y - 8), 2.5, 2.5);
+                dc.DrawLine(pen, new Point(x - 1, y + 4), new Point(x + 5, y - 4));
+                dc.DrawEllipse(NoteWhite, null, new Point(x + 5, y - 4), 2.5, 2.5);
+                break;
+        }
+    }
+
     public static void DrawLedgerLines(DrawingContext dc, double x, double noteY,
         double staffTopY, Pen linePen)
     {
