@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:NESMusicEditor.Controls"
         xmlns:models="clr-namespace:NESMusicEditor.Models;assembly=NESMusicEditor.Core"
         Title="NES Music Editor"
-        MinWidth="900" MinHeight="600"
+        MinWidth="1000" MinHeight="600"
         Width="1100" Height="720"
         Background="#0F0F1A"
         FontFamily="Consolas">
@@ -100,6 +100,9 @@
                     <Run Text="  |  "/>
                     <Run Text="Tempo: "/>
                     <Run Foreground="#FFE000" Text="120 BPM"/>
+                    <Run Text="  |  "/>
+                    <Run Text="Accidental: "/>
+                    <Run x:Name="AccidentalStatusRun" Foreground="#FFE000" Text="&#x266E; Natural"/>
                 </TextBlock>
             </DockPanel>
         </Border>
@@ -123,24 +126,21 @@
                     <ColumnDefinition Width="16"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="120"/>
-                    <ColumnDefinition Width="16"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="16"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="6"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="4"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- Row 0: section header -->
-                <TextBlock Grid.Row="0" Grid.ColumnSpan="16"
+                <TextBlock Grid.Row="0" Grid.ColumnSpan="11"
                            Style="{StaticResource SectionLabel}"
                            Text="PROPERTIES"/>
 
-                <!-- Row 2: controls -->
+                <!-- Row 2: Pitch | Duration | [NOTE]/[REST] | Instrument | Volume -->
                 <!-- Note Pitch -->
                 <Label Grid.Row="2" Grid.Column="0" Content="Pitch:"/>
                 <ComboBox Grid.Row="2" Grid.Column="1" SelectedIndex="0">
@@ -192,16 +192,16 @@
                                VerticalAlignment="Center" Margin="4,0,0,0" Width="18"/>
                 </StackPanel>
 
-                <!-- Sharp/Flat -->
-                <Label Grid.Row="2" Grid.Column="12" Content="Accidental:"/>
-                <StackPanel Grid.Row="2" Grid.Column="13" Orientation="Horizontal" VerticalAlignment="Center">
-                    <RadioButton x:Name="AccNatural" Content="&#x266E;" IsChecked="True" Checked="Accidental_Checked" Tag="0"/>
-                    <RadioButton x:Name="AccSharp"   Content="&#x266F;" Checked="Accidental_Checked" Tag="1"/>
-                    <RadioButton x:Name="AccFlat"    Content="&#x266D;" Checked="Accidental_Checked" Tag="-1"/>
+                <!-- Row 4: Accidental | Vibrato -->
+                <Label Grid.Row="4" Grid.Column="0" Content="Accidental:"/>
+                <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton x:Name="AccNatural" Content="&#x266E; Natural" IsChecked="True" Checked="Accidental_Checked" Tag="0"/>
+                    <RadioButton x:Name="AccSharp"   Content="&#x266F; Sharp" Checked="Accidental_Checked" Tag="1" Margin="8,0,0,0"/>
+                    <RadioButton x:Name="AccFlat"    Content="&#x266D; Flat" Checked="Accidental_Checked" Tag="-1" Margin="8,0,0,0"/>
                 </StackPanel>
 
                 <!-- Vibrato -->
-                <CheckBox Grid.Row="2" Grid.Column="15" Content="Vibrato" VerticalAlignment="Center"/>
+                <CheckBox Grid.Row="4" Grid.Column="3" Content="Vibrato" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 

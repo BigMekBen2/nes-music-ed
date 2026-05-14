@@ -186,6 +186,7 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         midiNote += CurrentAccidental;
 
         NoteClicked?.Invoke(measure, slot, midiNote, CurrentDuration, CurrentAccidental, IsRestMode);
+        Window.GetWindow(this)?.Focus();
     }
 
     private void OnRightClick(object sender, MouseButtonEventArgs e)
@@ -194,6 +195,7 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         if (!HitTestSlot(pos, out int measure, out int slot)) return;
         LastClickedPos = (measure, slot);
         NoteRightClicked?.Invoke(measure, slot);
+        Window.GetWindow(this)?.Focus();
     }
 
     private bool HitTestSlot(Point pos, out int measure, out int slot)
@@ -205,6 +207,16 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         double relX = pos.X - staffStartX;
         double pps = PixelsPerSixteenth;
         int slotIdx = (int)(relX / pps);
+
+        int durationSlots = CurrentDuration switch {
+            NoteDuration.Whole => 16,
+            NoteDuration.Half => 8,
+            NoteDuration.Quarter => 4,
+            NoteDuration.Eighth => 2,
+            _ => 1
+        };
+        slotIdx = (slotIdx / durationSlots) * durationSlots;
+
         measure = slotIdx / SlotsPerMeasure;
         slot = slotIdx % SlotsPerMeasure;
         return measure < MeasureCount;
@@ -271,10 +283,13 @@ public class StaffCanvas : System.Windows.Controls.Canvas
             }
         }
 
-        // 8 & 9. Notes from Song model
+        // 8. Dashed duration grid lines
+        DrawDurationGrid(dc, staffStartX, staffTopY, staffBottomY, measureWidth);
+
+        // 9 & 10. Notes from Song model
         DrawNotes(dc, staffStartX, staffTopY, staffCenterY, measureWidth);
 
-        // 10. Ghost note preview
+        // 11. Ghost note preview
         if (_mouseOver)
             DrawGhostNote(dc, staffStartX, staffTopY, staffCenterY, measureWidth, h);
     }
@@ -299,6 +314,34 @@ public class StaffCanvas : System.Windows.Controls.Canvas
             tf, 14, Brushes.White, 96.0);
         dc.DrawText(topFt, new Point(x, staffTopY));
         dc.DrawText(botFt, new Point(x, staffTopY + ls * 2));
+    }
+
+    private void DrawDurationGrid(DrawingContext dc, double staffStartX, double staffTopY,
+        double staffBottomY, double measureWidth)
+    {
+        int step = CurrentDuration switch {
+            NoteDuration.Whole => 16,
+            NoteDuration.Half => 8,
+            NoteDuration.Quarter => 4,
+            NoteDuration.Eighth => 2,
+            _ => 1
+        };
+        if (step >= 16) return; // barlines already cover whole-note boundaries
+
+        var dashPen = new Pen(new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x5A)), 1.0);
+        dashPen.DashStyle = new DashStyle(new double[] { 4, 4 }, 0);
+
+        double pps = PixelsPerSixteenth;
+        int slotsPerMeasure = SlotsPerMeasure;
+
+        for (int m = 0; m < MeasureCount; m++)
+        {
+            for (int s = step; s < slotsPerMeasure; s += step)
+            {
+                double x = staffStartX + m * measureWidth + s * pps;
+                dc.DrawLine(dashPen, new Point(x, staffTopY), new Point(x, staffBottomY));
+            }
+        }
     }
 
     private void DrawNotes(DrawingContext dc, double staffStartX, double staffTopY,
@@ -373,14 +416,17 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         double relX = mx - ssx;
         double pps = PixelsPerSixteenth;
         int slotIdx = (int)(relX / pps);
+
+        int durationSlots = DurationToSlots(CurrentDuration);
+        slotIdx = (slotIdx / durationSlots) * durationSlots; // snap to duration boundary
+
         int measure = slotIdx / SlotsPerMeasure;
         if (measure >= MeasureCount) return;
 
-        int durationSlots = DurationToSlots(CurrentDuration);
         double ghostX = MeasureLayout.GetSlotX(slotIdx, pps, staffStartX);
 
         dc.DrawRectangle(BeatHighlightBrush, null,
-            new Rect(ghostX - pps / 2, 0, durationSlots * pps, h));
+            new Rect(ghostX, 0, durationSlots * pps, h));
 
         if (IsRestMode)
         {
