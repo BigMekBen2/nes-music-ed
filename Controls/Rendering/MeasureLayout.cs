@@ -74,6 +74,9 @@ public static class MeasureLayout
         return staffStartX + measure * measureWidth + beat * pixelsPerBeat + pixelsPerBeat * 0.5;
     }
 
+    public static double GetSlotX(int slot, double pixelsPerSixteenth, double staffStartX)
+        => staffStartX + slot * pixelsPerSixteenth + pixelsPerSixteenth * 0.5;
+
     public static double GetStaffStartX(double leftMargin)
         => leftMargin + ClefAreaWidth + TimeSigAreaWidth;
 }

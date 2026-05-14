@@ -109,8 +109,8 @@ public class StaffCanvas : System.Windows.Controls.Canvas
 
     // ── Event for note placement (so MainWindow can wire undo/redo) ──────────
     public event Action<int, int, int, NoteDuration, int, bool>? NoteClicked;
-        // measure, beat, midiNote, duration, accidental, isRest
-    public event Action<int, int>? NoteRightClicked; // measure, beat
+        // measure, slot, midiNote, duration, accidental, isRest
+    public event Action<int, int>? NoteRightClicked; // measure, slot
 
     // ── Brushes / Pens ────────────────────────────────────────────────────────
 
@@ -154,11 +154,15 @@ public class StaffCanvas : System.Windows.Controls.Canvas
     private bool _mouseOver;
     private Point _mousePos;
 
-    // Last clicked position (for Delete hotkey)
-    public (int measure, int beat) LastClickedPos { get; private set; } = (-1, -1);
+    // Last clicked position (for Delete hotkey) — stored as (measure, slot)
+    public (int measure, int slot) LastClickedPos { get; private set; } = (-1, -1);
+
+    private double PixelsPerSixteenth => PixelsPerBeat / 4.0;
+    private int SlotsPerMeasure => BeatsPerMeasure * 4;
 
     public StaffCanvas()
     {
+        Focusable = false;
         MouseEnter += (_, _) => { _mouseOver = true; InvalidateVisual(); };
         MouseLeave += (_, _) => { _mouseOver = false; InvalidateVisual(); };
         MouseMove += (_, e) => { _mousePos = e.GetPosition(this); InvalidateVisual(); };
@@ -169,43 +173,40 @@ public class StaffCanvas : System.Windows.Controls.Canvas
     private void OnLeftClick(object sender, MouseButtonEventArgs e)
     {
         var pos = e.GetPosition(this);
-        if (!HitTestBeat(pos, out int measure, out int beat)) return;
-        LastClickedPos = (measure, beat);
+        if (!HitTestSlot(pos, out int measure, out int slot)) return;
+        LastClickedPos = (measure, slot);
 
         double h = ActualHeight;
         double ls = MeasureLayout.LineSpacing;
         double staffTopY = (h - ls * 4) / 2.0;
-        double staffCenterY = staffTopY + ls * 2;
-        double clefAreaX = LeftMargin + LabelAreaWidth;
-        double staffStartX = clefAreaX + MeasureLayout.ClefAreaWidth + MeasureLayout.TimeSigAreaWidth;
 
         double halfStep = ls / 2.0;
         double snappedY = Math.Round((pos.Y - staffTopY) / halfStep) * halfStep + staffTopY;
         int midiNote = MeasureLayout.GetMidiNoteFromY(snappedY, ClefType, staffTopY);
         midiNote += CurrentAccidental;
 
-        NoteClicked?.Invoke(measure, beat, midiNote, CurrentDuration, CurrentAccidental, IsRestMode);
+        NoteClicked?.Invoke(measure, slot, midiNote, CurrentDuration, CurrentAccidental, IsRestMode);
     }
 
     private void OnRightClick(object sender, MouseButtonEventArgs e)
     {
         var pos = e.GetPosition(this);
-        if (!HitTestBeat(pos, out int measure, out int beat)) return;
-        LastClickedPos = (measure, beat);
-        NoteRightClicked?.Invoke(measure, beat);
+        if (!HitTestSlot(pos, out int measure, out int slot)) return;
+        LastClickedPos = (measure, slot);
+        NoteRightClicked?.Invoke(measure, slot);
     }
 
-    private bool HitTestBeat(Point pos, out int measure, out int beat)
+    private bool HitTestSlot(Point pos, out int measure, out int slot)
     {
-        measure = beat = 0;
+        measure = slot = 0;
         double clefAreaX = LeftMargin + LabelAreaWidth;
         double staffStartX = clefAreaX + MeasureLayout.ClefAreaWidth + MeasureLayout.TimeSigAreaWidth;
         if (pos.X < staffStartX) return false;
         double relX = pos.X - staffStartX;
-        double ppb = PixelsPerBeat;
-        int beatIdx = (int)(relX / ppb);
-        measure = beatIdx / BeatsPerMeasure;
-        beat = beatIdx % BeatsPerMeasure;
+        double pps = PixelsPerSixteenth;
+        int slotIdx = (int)(relX / pps);
+        measure = slotIdx / SlotsPerMeasure;
+        slot = slotIdx % SlotsPerMeasure;
         return measure < MeasureCount;
     }
 
@@ -309,8 +310,10 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         if (ti < 0 || ti >= song.Tracks.Count) return;
         var track = song.Tracks[ti];
 
+        double pps = PixelsPerSixteenth;
+
         // Render from patterns in the order list
-        int beatCursor = 0;
+        int slotCursor = 0;
         foreach (int patId in track.OrderList)
         {
             var pattern = song.Patterns.Find(p => p.PatternId == patId && p.TrackIndex == ti);
@@ -319,14 +322,16 @@ public class StaffCanvas : System.Windows.Controls.Canvas
             for (int rowIdx = 0; rowIdx < pattern.Rows.Count; rowIdx++)
             {
                 var row = pattern.Rows[rowIdx];
-                if (row.Cells.Count == 0) { beatCursor++; continue; }
-                var cell = row.Cells[0];
-
-                int measure = beatCursor / BeatsPerMeasure;
-                int beat = beatCursor % BeatsPerMeasure;
+                int measure = slotCursor / SlotsPerMeasure;
                 if (measure >= MeasureCount) break;
 
-                double nx = MeasureLayout.GetBeatX(measure, beat, BeatsPerMeasure, PixelsPerBeat, staffStartX);
+                if (row.Cells.Count == 0) { slotCursor++; continue; }
+                var cell = row.Cells[0];
+
+                // Skip continuation slots
+                if (cell.Note == -3) { slotCursor++; continue; }
+
+                double nx = MeasureLayout.GetSlotX(slotCursor, pps, staffStartX);
 
                 var duration = cell.Effects.TryGetValue(999, out int durVal)
                     ? (NoteDuration)durVal
@@ -334,8 +339,7 @@ public class StaffCanvas : System.Windows.Controls.Canvas
 
                 if (cell.Note == -2)
                 {
-                    // Rest
-                    double restY = staffTopY + MeasureLayout.LineSpacing * 2; // center of staff
+                    double restY = staffTopY + MeasureLayout.LineSpacing * 2;
                     NoteGlyphRenderer.DrawRest(dc, nx, restY, duration, new Pen(Brushes.White, 1.2));
                 }
                 else if (cell.Note >= 0)
@@ -348,7 +352,7 @@ public class StaffCanvas : System.Windows.Controls.Canvas
                     NoteGlyphRenderer.DrawNote(dc, nx, ny, duration, accidental, staffCenterY);
                 }
 
-                beatCursor++;
+                slotCursor++;
             }
         }
     }
@@ -367,16 +371,16 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         double ssx = clefAreaX + MeasureLayout.ClefAreaWidth + MeasureLayout.TimeSigAreaWidth;
         if (mx < ssx) return;
         double relX = mx - ssx;
-        double ppb = PixelsPerBeat;
-        int beatIdx = (int)(relX / ppb);
-        int measure = beatIdx / BeatsPerMeasure;
-        int beat = beatIdx % BeatsPerMeasure;
+        double pps = PixelsPerSixteenth;
+        int slotIdx = (int)(relX / pps);
+        int measure = slotIdx / SlotsPerMeasure;
         if (measure >= MeasureCount) return;
 
-        double ghostX = MeasureLayout.GetBeatX(measure, beat, BeatsPerMeasure, ppb, staffStartX);
+        int durationSlots = DurationToSlots(CurrentDuration);
+        double ghostX = MeasureLayout.GetSlotX(slotIdx, pps, staffStartX);
 
         dc.DrawRectangle(BeatHighlightBrush, null,
-            new Rect(ghostX - ppb / 2, 0, ppb, h));
+            new Rect(ghostX - pps / 2, 0, durationSlots * pps, h));
 
         if (IsRestMode)
         {
@@ -389,6 +393,16 @@ public class StaffCanvas : System.Windows.Controls.Canvas
                 staffCenterY, GhostBrush);
         }
     }
+
+    private static int DurationToSlots(NoteDuration d) => d switch
+    {
+        NoteDuration.Whole     => 16,
+        NoteDuration.Half      => 8,
+        NoteDuration.Quarter   => 4,
+        NoteDuration.Eighth    => 2,
+        NoteDuration.Sixteenth => 1,
+        _ => 4
+    };
 }
 
 // ── Demo note support (kept for backward compat, no longer used in MainWindow) ──

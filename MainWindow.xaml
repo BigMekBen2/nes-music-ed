@@ -117,7 +117,7 @@
                     <ColumnDefinition Width="16"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="120"/>
-                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="120"/>
                     <ColumnDefinition Width="16"/>
@@ -153,19 +153,21 @@
                     <ComboBoxItem>B4</ComboBoxItem>
                 </ComboBox>
 
-                <!-- Duration + Note/Rest mode -->
+                <!-- Duration -->
                 <Label Grid.Row="2" Grid.Column="3" Content="Duration:"/>
-                <StackPanel Grid.Row="2" Grid.Column="4" Orientation="Horizontal">
-                    <ComboBox x:Name="DurationCombo" SelectedIndex="2" Width="68"
-                              SelectionChanged="DurationCombo_SelectionChanged">
-                        <ComboBoxItem>Whole</ComboBoxItem>
-                        <ComboBoxItem>Half</ComboBoxItem>
-                        <ComboBoxItem>Quarter</ComboBoxItem>
-                        <ComboBoxItem>Eighth</ComboBoxItem>
-                        <ComboBoxItem>16th</ComboBoxItem>
-                    </ComboBox>
+                <ComboBox Grid.Row="2" Grid.Column="4" x:Name="DurationCombo" SelectedIndex="2"
+                          SelectionChanged="DurationCombo_SelectionChanged">
+                    <ComboBoxItem>Whole</ComboBoxItem>
+                    <ComboBoxItem>Half</ComboBoxItem>
+                    <ComboBoxItem>Quarter</ComboBoxItem>
+                    <ComboBoxItem>Eighth</ComboBoxItem>
+                    <ComboBoxItem>16th</ComboBoxItem>
+                </ComboBox>
+
+                <!-- Note/Rest mode -->
+                <StackPanel Grid.Row="2" Grid.Column="5" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0">
                     <RadioButton x:Name="ModeNote" Content="[NOTE]" IsChecked="True"
-                                 Checked="NoteMode_Checked" Tag="note" Margin="6,0,0,0"
+                                 Checked="NoteMode_Checked" Tag="note"
                                  VerticalAlignment="Center"/>
                     <RadioButton x:Name="ModeRest" Content="[REST]"
                                  Checked="NoteMode_Checked" Tag="rest" Margin="4,0,0,0"

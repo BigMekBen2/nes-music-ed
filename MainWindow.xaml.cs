@@ -40,10 +40,10 @@ public partial class MainWindow : Window
         foreach (var staff in AllStaves)
         {
             var capturedStaff = staff;
-            capturedStaff.NoteClicked += (m, b, midi, dur, acc, isRest)
-                => PlaceNote(capturedStaff, m, b, midi, dur, acc, isRest);
-            capturedStaff.NoteRightClicked += (m, b)
-                => OnStaffNoteRightClicked(capturedStaff, m, b);
+            capturedStaff.NoteClicked += (m, slot, midi, dur, acc, isRest)
+                => PlaceNote(capturedStaff, m, slot, midi, dur, acc, isRest);
+            capturedStaff.NoteRightClicked += (m, slot)
+                => OnStaffNoteRightClicked(capturedStaff, m, slot);
         }
     }
 
@@ -60,9 +60,9 @@ public partial class MainWindow : Window
             track.OrderList.Add(i);
             song.Tracks.Add(track);
 
-            var pattern = new Pattern { PatternId = i, TrackIndex = i, RowCount = 64 };
-            // Pre-fill 64 empty rows
-            for (int r = 0; r < 64; r++)
+            var pattern = new Pattern { PatternId = i, TrackIndex = i, RowCount = 256 };
+            // Pre-fill 256 rows (16 measures × 4 beats × 4 sixteenths)
+            for (int r = 0; r < 256; r++)
                 pattern.Rows.Add(new PatternRow());
             song.Patterns.Add(pattern);
         }
@@ -72,38 +72,80 @@ public partial class MainWindow : Window
 
     // ── Note placement ────────────────────────────────────────────────────────
 
-    private void PlaceNote(StaffCanvas staff, int measure, int beat, int midiNote,
+    private static int DurationToSlots(NoteDuration d) => d switch
+    {
+        NoteDuration.Whole     => 16,
+        NoteDuration.Half      => 8,
+        NoteDuration.Quarter   => 4,
+        NoteDuration.Eighth    => 2,
+        NoteDuration.Sixteenth => 1,
+        _ => 4
+    };
+
+    private void PlaceNote(StaffCanvas staff, int measure, int slotInMeasure, int midiNote,
         NoteDuration duration, int accidental, bool isRest)
     {
         int ti = staff.TrackIndex;
         var pattern = _song.Patterns.Find(p => p.TrackIndex == ti && _song.Tracks[ti].OrderList.Contains(p.PatternId));
         if (pattern == null) return;
 
-        int rowIndex = measure * staff.BeatsPerMeasure + beat;
-        if (rowIndex >= pattern.Rows.Count) return;
+        int slotsPerMeasure = staff.BeatsPerMeasure * 4;
+        int startSlot = measure * slotsPerMeasure + slotInMeasure;
+        int dSlots = DurationToSlots(duration);
 
-        var row = pattern.Rows[rowIndex];
+        if (startSlot >= pattern.Rows.Count) return;
 
-        // Snapshot old cell for undo
-        PatternCell? oldCell = row.Cells.Count > 0 ? row.Cells[0] : null;
-        PatternCell? oldCellCopy = oldCell == null ? null : new PatternCell
+        // Find the range to clear: walk back to find if startSlot is inside an existing note's span
+        int clearFrom = startSlot;
+        for (int k = startSlot; k >= 0; k--)
         {
-            Note = oldCell.Note,
-            Octave = oldCell.Octave,
-            InstrumentId = oldCell.InstrumentId,
-            Volume = oldCell.Volume,
-            Effects = new Dictionary<int, int>(oldCell.Effects)
-        };
+            var r = pattern.Rows[k];
+            if (r.Cells.Count == 0) break;
+            if (r.Cells[0].Note == -3) continue; // continuation
+            // Found a note-start at k — check if it spans into startSlot
+            int nd = DurationToSlots(r.Cells[0].Effects.TryGetValue(999, out int dv) ? (NoteDuration)dv : NoteDuration.Quarter);
+            if (k + nd > startSlot) clearFrom = k;
+            break;
+        }
+        int clearTo = Math.Min(startSlot + dSlots, pattern.Rows.Count); // exclusive
+
+        // Snapshot affected rows for undo
+        var snapshots = new List<(int idx, PatternCell? cell)>();
+        for (int i = clearFrom; i < clearTo; i++)
+        {
+            var row = pattern.Rows[i];
+            PatternCell? copy = null;
+            if (row.Cells.Count > 0)
+            {
+                var c = row.Cells[0];
+                copy = new PatternCell { Note = c.Note, Octave = c.Octave, InstrumentId = c.InstrumentId, Volume = c.Volume, Effects = new Dictionary<int, int>(c.Effects) };
+            }
+            snapshots.Add((i, copy));
+        }
 
         _undo.Execute(
             () =>
             {
-                SetCell(pattern, rowIndex, midiNote, duration, accidental, isRest);
+                // Clear affected range
+                for (int i = clearFrom; i < clearTo; i++)
+                    pattern.Rows[i].Cells.Clear();
+
+                // Place note
+                SetCell(pattern, startSlot, midiNote, duration, accidental, isRest);
+
+                // Mark continuation slots
+                for (int i = startSlot + 1; i < startSlot + dSlots && i < pattern.Rows.Count; i++)
+                {
+                    var contCell = new PatternCell { Note = -3 };
+                    pattern.Rows[i].Cells.Add(contCell);
+                }
+
                 staff.InvalidateVisual();
             },
             () =>
             {
-                RestoreCell(pattern, rowIndex, oldCellCopy);
+                foreach (var (idx, saved) in snapshots)
+                    RestoreCell(pattern, idx, saved);
                 staff.InvalidateVisual();
             });
     }
@@ -130,7 +172,6 @@ public partial class MainWindow : Window
         }
         else
         {
-            // Decompose midiNote into pc + octave (FamiTracker style: octave = midi/12 - 1)
             int octave = midiNote / 12 - 1;
             int pc = midiNote % 12;
             cell.Note = pc;
@@ -152,36 +193,55 @@ public partial class MainWindow : Window
             row.Cells.Add(saved);
     }
 
-    private void DeleteNoteAt(StaffCanvas staff, int measure, int beat)
+    private void DeleteNoteAt(StaffCanvas staff, int measure, int slotInMeasure)
     {
         int ti = staff.TrackIndex;
         var pattern = _song.Patterns.Find(p => p.TrackIndex == ti && _song.Tracks[ti].OrderList.Contains(p.PatternId));
         if (pattern == null) return;
 
-        int rowIndex = measure * staff.BeatsPerMeasure + beat;
-        if (rowIndex >= pattern.Rows.Count) return;
+        int slotsPerMeasure = staff.BeatsPerMeasure * 4;
+        int slot = measure * slotsPerMeasure + slotInMeasure;
+        if (slot >= pattern.Rows.Count) return;
 
-        var row = pattern.Rows[rowIndex];
-        if (row.Cells.Count == 0) return;
-
-        var cellCopy = new PatternCell
+        // Walk back to find the note-start if this is a continuation cell
+        int noteStart = slot;
+        for (int k = slot; k >= 0; k--)
         {
-            Note = row.Cells[0].Note,
-            Octave = row.Cells[0].Octave,
-            InstrumentId = row.Cells[0].InstrumentId,
-            Volume = row.Cells[0].Volume,
-            Effects = new Dictionary<int, int>(row.Cells[0].Effects)
-        };
+            var r = pattern.Rows[k];
+            if (r.Cells.Count == 0) return; // nothing to delete
+            if (r.Cells[0].Note != -3) { noteStart = k; break; }
+        }
+
+        var startRow = pattern.Rows[noteStart];
+        if (startRow.Cells.Count == 0) return;
+
+        int dSlots = DurationToSlots(startRow.Cells[0].Effects.TryGetValue(999, out int dv) ? (NoteDuration)dv : NoteDuration.Quarter);
+        int clearTo = Math.Min(noteStart + dSlots, pattern.Rows.Count);
+
+        var snapshots = new List<(int idx, PatternCell? cell)>();
+        for (int i = noteStart; i < clearTo; i++)
+        {
+            var row = pattern.Rows[i];
+            PatternCell? copy = null;
+            if (row.Cells.Count > 0)
+            {
+                var c = row.Cells[0];
+                copy = new PatternCell { Note = c.Note, Octave = c.Octave, InstrumentId = c.InstrumentId, Volume = c.Volume, Effects = new Dictionary<int, int>(c.Effects) };
+            }
+            snapshots.Add((i, copy));
+        }
 
         _undo.Execute(
             () =>
             {
-                pattern.Rows[rowIndex].Cells.Clear();
+                for (int i = noteStart; i < clearTo; i++)
+                    pattern.Rows[i].Cells.Clear();
                 staff.InvalidateVisual();
             },
             () =>
             {
-                RestoreCell(pattern, rowIndex, cellCopy);
+                foreach (var (idx, saved) in snapshots)
+                    RestoreCell(pattern, idx, saved);
                 staff.InvalidateVisual();
             });
     }
@@ -210,6 +270,7 @@ public partial class MainWindow : Window
             case Key.Up when shift: SetAccidental(1); e.Handled = true; break;
             case Key.Down when shift: SetAccidental(-1); e.Handled = true; break;
             case Key.D0:
+            case Key.NumPad0:
             case Key.N: SetAccidental(0); e.Handled = true; break;
 
             case Key.Space:
@@ -241,13 +302,12 @@ public partial class MainWindow : Window
 
     private void DeleteAtLastClicked()
     {
-        // Find whichever staff was last interacted with — try all
         foreach (var staff in AllStaves)
         {
-            var (m, b) = staff.LastClickedPos;
-            if (m >= 0 && b >= 0)
+            var (m, slot) = staff.LastClickedPos;
+            if (m >= 0 && slot >= 0)
             {
-                DeleteNoteAt(staff, m, b);
+                DeleteNoteAt(staff, m, slot);
                 break;
             }
         }
@@ -284,6 +344,6 @@ public partial class MainWindow : Window
     private void Menu_Stub(object sender, RoutedEventArgs e) { }
     private void Toolbar_Stub(object sender, RoutedEventArgs e) { }
 
-    private void OnStaffNoteRightClicked(StaffCanvas staff, int measure, int beat)
-        => DeleteNoteAt(staff, measure, beat);
+    private void OnStaffNoteRightClicked(StaffCanvas staff, int measure, int slot)
+        => DeleteNoteAt(staff, measure, slot);
 }
