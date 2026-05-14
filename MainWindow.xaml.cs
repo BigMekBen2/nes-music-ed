@@ -384,12 +384,19 @@ public partial class MainWindow : Window
 
     private async void Toolbar_Export(object sender, RoutedEventArgs e)
     {
-        var dlg = new SaveFileDialog { Filter = "OGG Audio|*.ogg", DefaultExt = ".ogg", FileName = _song.Title };
+        var dlg = new SaveFileDialog { Filter = "NES Music Files|*.nsf", DefaultExt = ".nsf", FileName = _song.Title };
         if (dlg.ShowDialog() != true) return;
-        string path = dlg.FileName;
+        string nsfPath = dlg.FileName;
+        string oggPath = System.IO.Path.ChangeExtension(nsfPath, ".ogg");
         StatusRun.Text = "Exporting...";
-        await Task.Run(() => new OggExporter().Export(_song, path));
-        StatusRun.Text = $"Export complete: {System.IO.Path.GetFileName(path)}";
+        await Task.Run(() =>
+        {
+            new NsfExporter().Export(_song, nsfPath);
+            new OggExporter().Export(_song, oggPath);
+        });
+        string nsfName = System.IO.Path.GetFileName(nsfPath);
+        string oggName = System.IO.Path.GetFileName(oggPath);
+        StatusRun.Text = $"Exported: {nsfName} + {oggName}";
     }
 
     private async void Toolbar_Play(object sender, RoutedEventArgs e)
