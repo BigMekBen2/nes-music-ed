@@ -155,7 +155,8 @@
 
                 <!-- Duration -->
                 <Label Grid.Row="2" Grid.Column="3" Content="Duration:"/>
-                <ComboBox Grid.Row="2" Grid.Column="4" SelectedIndex="1">
+                <ComboBox x:Name="DurationCombo" Grid.Row="2" Grid.Column="4" SelectedIndex="2"
+                          SelectionChanged="DurationCombo_SelectionChanged">
                     <ComboBoxItem>Whole</ComboBoxItem>
                     <ComboBoxItem>Half</ComboBoxItem>
                     <ComboBoxItem>Quarter</ComboBoxItem>
@@ -184,9 +185,9 @@
                 <!-- Sharp/Flat -->
                 <Label Grid.Row="2" Grid.Column="12" Content="Accidental:"/>
                 <StackPanel Grid.Row="2" Grid.Column="13" Orientation="Horizontal" VerticalAlignment="Center">
-                    <RadioButton Content="&#x266E;" IsChecked="True"/>
-                    <RadioButton Content="&#x266F;"/>
-                    <RadioButton Content="&#x266D;"/>
+                    <RadioButton x:Name="AccNatural" Content="&#x266E;" IsChecked="True" Checked="Accidental_Checked" Tag="0"/>
+                    <RadioButton x:Name="AccSharp"   Content="&#x266F;" Checked="Accidental_Checked" Tag="1"/>
+                    <RadioButton x:Name="AccFlat"    Content="&#x266D;" Checked="Accidental_Checked" Tag="-1"/>
                 </StackPanel>
 
                 <!-- Vibrato -->

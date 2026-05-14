@@ -775,6 +775,15 @@ Compare OGG vs. NSF using:
 
 ---
 
-**Document Version:** 1.0  
+**Document Version:** 1.1  
 **Last Updated:** May 14, 2026  
-**Status:** Ready for Implementation
+**Status:** Phase 2 complete, Phase 3 in progress
+
+---
+
+## Missed Requirements
+
+### Rest vs Note selection (discovered Phase 2 review)
+The Properties Panel needs a way to select **Rest** as the current input mode (instead of a pitched note). When Rest is active, clicking the staff places a rest glyph of the current duration rather than a note head.
+
+**Decision:** Add a Rest/Note toggle (e.g. radio buttons or a toggle button) to the Properties Panel toolbar area, next to the Duration selector. Implement in Phase 3 alongside click-to-place.

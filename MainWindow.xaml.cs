@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using NESMusicEditor.Controls;
 using NESMusicEditor.Controls.Rendering;
 using NESMusicEditor.Models;
@@ -72,6 +74,21 @@ public partial class MainWindow : Window
         song.Tracks.Add(noise);
 
         return song;
+    }
+
+    private void DurationCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var duration = (NoteDuration)DurationCombo.SelectedIndex;
+        foreach (var staff in new[] { StaffSquare1, StaffSquare2, StaffTriangle, StaffNoise })
+            staff.CurrentDuration = duration;
+    }
+
+    private void Accidental_Checked(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton rb || rb.Tag is not string tag) return;
+        int accidental = int.Parse(tag);
+        foreach (var staff in new[] { StaffSquare1, StaffSquare2, StaffTriangle, StaffNoise })
+            staff.CurrentAccidental = accidental;
     }
 
     private void Menu_Stub(object sender, RoutedEventArgs e) { }
