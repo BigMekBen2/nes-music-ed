@@ -78,6 +78,7 @@ public partial class MainWindow : Window
 
     private void DurationCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (StaffSquare1 == null) return;
         var duration = (NoteDuration)DurationCombo.SelectedIndex;
         foreach (var staff in new[] { StaffSquare1, StaffSquare2, StaffTriangle, StaffNoise })
             staff.CurrentDuration = duration;
@@ -85,6 +86,7 @@ public partial class MainWindow : Window
 
     private void Accidental_Checked(object sender, RoutedEventArgs e)
     {
+        if (StaffSquare1 == null) return;
         if (sender is not ToggleButton rb || rb.Tag is not string tag) return;
         int accidental = int.Parse(tag);
         foreach (var staff in new[] { StaffSquare1, StaffSquare2, StaffTriangle, StaffNoise })
