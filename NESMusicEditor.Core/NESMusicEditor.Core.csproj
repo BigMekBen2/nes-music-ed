@@ -4,4 +4,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>NESMusicEditor</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="OggVorbisEncoder" Version="1.2.2" />
+  </ItemGroup>
 </Project>

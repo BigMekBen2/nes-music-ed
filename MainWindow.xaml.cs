@@ -1,13 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
+using Microsoft.Win32;
 using NESMusicEditor.Controls;
 using NESMusicEditor.Controls.Rendering;
 using NESMusicEditor.Editing;
 using NESMusicEditor.Models;
+using NESMusicEditor.Synthesis;
 
 namespace NESMusicEditor;
 
@@ -17,6 +22,8 @@ public partial class MainWindow : Window
     private readonly UndoRedoManager _undo = new();
     private bool _isPlaying;
     private bool _isRestMode;
+    private MediaPlayer? _player;
+    private string? _tempWavPath;
 
     private StaffCanvas[] AllStaves => new[] { StaffSquare1, StaffSquare2, StaffTriangle, StaffNoise };
 
@@ -287,7 +294,8 @@ public partial class MainWindow : Window
             case Key.N: SetAccidental(0); e.Handled = true; break;
 
             case Key.Space:
-                _isPlaying = !_isPlaying;
+                if (_isPlaying) Toolbar_Stop(this, new RoutedEventArgs());
+                else Toolbar_Play(this, new RoutedEventArgs());
                 e.Handled = true;
                 break;
 
@@ -356,6 +364,41 @@ public partial class MainWindow : Window
 
     private void Menu_Stub(object sender, RoutedEventArgs e) { }
     private void Toolbar_Stub(object sender, RoutedEventArgs e) { }
+
+    private async void Toolbar_Export(object sender, RoutedEventArgs e)
+    {
+        var dlg = new SaveFileDialog { Filter = "OGG Audio|*.ogg", DefaultExt = ".ogg", FileName = _song.Title };
+        if (dlg.ShowDialog() != true) return;
+        string path = dlg.FileName;
+        StatusRun.Text = "Exporting...";
+        await Task.Run(() => new OggExporter().Export(_song, path));
+        StatusRun.Text = $"Export complete: {System.IO.Path.GetFileName(path)}";
+    }
+
+    private async void Toolbar_Play(object sender, RoutedEventArgs e)
+    {
+        _player?.Stop();
+        _player?.Close();
+        _player = null;
+
+        StatusRun.Text = "Synthesizing...";
+        _tempWavPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "nes_preview.wav");
+        string wavPath = _tempWavPath;
+        await Task.Run(() => new WavExporter().Export(_song, wavPath));
+
+        _isPlaying = true;
+        _player = new MediaPlayer();
+        _player.Open(new Uri(wavPath, UriKind.Absolute));
+        _player.Play();
+        StatusRun.Text = "Playing...";
+    }
+
+    private void Toolbar_Stop(object sender, RoutedEventArgs e)
+    {
+        _player?.Stop();
+        _isPlaying = false;
+        StatusRun.Text = "Ready";
+    }
 
     private void OnStaffNoteRightClicked(StaffCanvas staff, int measure, int slot)
         => DeleteNoteAt(staff, measure, slot);

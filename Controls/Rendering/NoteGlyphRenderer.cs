@@ -1,9 +1,8 @@
 using System.Windows;
 using System.Windows.Media;
+using NESMusicEditor.Models;
 
 namespace NESMusicEditor.Controls.Rendering;
-
-public enum NoteDuration { Whole, Half, Quarter, Eighth, Sixteenth }
 
 public static class NoteGlyphRenderer
 {

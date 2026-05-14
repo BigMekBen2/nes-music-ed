@@ -69,14 +69,14 @@
                 <Rectangle Width="1" Fill="#3A3A6A" Margin="8,2"/>
 
                 <!-- Playback -->
-                <Button Style="{StaticResource AccentButton}" Content="&#x25BA; PLAY" Click="Toolbar_Stub" ToolTip="Play"/>
-                <Button Style="{StaticResource StopButton}" Content="&#x25FC; STOP" Click="Toolbar_Stub" ToolTip="Stop" Margin="2,0,0,0"/>
+                <Button Style="{StaticResource AccentButton}" Content="&#x25BA; PLAY" Click="Toolbar_Play" ToolTip="Play"/>
+                <Button Style="{StaticResource StopButton}" Content="&#x25FC; STOP" Click="Toolbar_Stop" ToolTip="Stop" Margin="2,0,0,0"/>
 
                 <!-- Separator -->
                 <Rectangle Width="1" Fill="#3A3A6A" Margin="8,2"/>
 
                 <!-- Export -->
-                <Button Style="{StaticResource RetroButton}" Content="[EXPORT]" Click="Toolbar_Stub" ToolTip="Export to NSF/MIDI" Margin="0,0,0,0"/>
+                <Button Style="{StaticResource RetroButton}" Content="[EXPORT]" Click="Toolbar_Export" ToolTip="Export to OGG" Margin="0,0,0,0"/>
             </StackPanel>
         </Border>
 
@@ -89,14 +89,14 @@
             <DockPanel>
                 <!-- Right side playback buttons -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button Style="{StaticResource AccentButton}" Content="&#x25BA;" Click="Toolbar_Stub"
+                    <Button Style="{StaticResource AccentButton}" Content="&#x25BA;" Click="Toolbar_Play"
                             ToolTip="Play" Width="28" Padding="0"/>
-                    <Button Style="{StaticResource StopButton}" Content="&#x25FC;" Click="Toolbar_Stub"
+                    <Button Style="{StaticResource StopButton}" Content="&#x25FC;" Click="Toolbar_Stop"
                             ToolTip="Stop" Width="28" Padding="0" Margin="2,0,0,0"/>
                 </StackPanel>
                 <!-- Status text -->
                 <TextBlock VerticalAlignment="Center" Foreground="#7070A0" FontFamily="Consolas" FontSize="11">
-                    <Run Foreground="#39FF14" Text="Ready"/>
+                    <Run x:Name="StatusRun" Foreground="#39FF14" Text="Ready"/>
                     <Run Text="  |  "/>
                     <Run Text="Tempo: "/>
                     <Run Foreground="#FFE000" Text="120 BPM"/>
