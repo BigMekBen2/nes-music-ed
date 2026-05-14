@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="NESMusicEditor.Core/NESMusicEditor.Core.csproj" />
+  <Project Path="NESMusicEditor.csproj" />
+  <Project Path="NESMusicEditor.Tests/NESMusicEditor.Tests.csproj" />
+</Solution>

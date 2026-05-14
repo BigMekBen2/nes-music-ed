@@ -7,4 +7,11 @@
     <RootNamespace>NESMusicEditor</RootNamespace>
     <AssemblyName>NESMusicEditor</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="NESMusicEditor.Core\**" />
+    <Compile Remove="NESMusicEditor.Tests\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="NESMusicEditor.Core\NESMusicEditor.Core.csproj" />
+  </ItemGroup>
 </Project>
