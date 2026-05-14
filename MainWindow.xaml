@@ -133,6 +133,8 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="4"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="4"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- Row 0: section header -->
@@ -202,6 +204,25 @@
 
                 <!-- Vibrato -->
                 <CheckBox x:Name="VibratoCheck" Grid.Row="4" Grid.Column="6" Content="Vibrato" VerticalAlignment="Center"/>
+
+                <!-- Row 6: Key/Tonic -->
+                <Label Grid.Row="6" Grid.Column="0" Content="Key/Tonic:"/>
+                <ComboBox Grid.Row="6" Grid.Column="1" x:Name="TonicCombo" SelectedIndex="0">
+                    <ComboBoxItem>C</ComboBoxItem>
+                    <ComboBoxItem>C#</ComboBoxItem>
+                    <ComboBoxItem>D</ComboBoxItem>
+                    <ComboBoxItem>D#</ComboBoxItem>
+                    <ComboBoxItem>E</ComboBoxItem>
+                    <ComboBoxItem>F</ComboBoxItem>
+                    <ComboBoxItem>F#</ComboBoxItem>
+                    <ComboBoxItem>G</ComboBoxItem>
+                    <ComboBoxItem>G#</ComboBoxItem>
+                    <ComboBoxItem>A</ComboBoxItem>
+                    <ComboBoxItem>A#</ComboBoxItem>
+                    <ComboBoxItem>B</ComboBoxItem>
+                </ComboBox>
+                <CheckBox x:Name="ShowTonicCheck" Grid.Row="6" Grid.Column="3" Grid.ColumnSpan="3"
+                          Content="Show Tonic on Staff" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 

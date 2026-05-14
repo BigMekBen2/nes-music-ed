@@ -56,6 +56,14 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         DependencyProperty.Register(nameof(IsRestMode), typeof(bool), typeof(StaffCanvas),
             new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
 
+    public static readonly DependencyProperty TonicPitchClassProperty =
+        DependencyProperty.Register(nameof(TonicPitchClass), typeof(int), typeof(StaffCanvas),
+            new FrameworkPropertyMetadata(0, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty ShowTonicProperty =
+        DependencyProperty.Register(nameof(ShowTonic), typeof(bool), typeof(StaffCanvas),
+            new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+
     public string ChannelName
     {
         get => (string)GetValue(ChannelNameProperty);
@@ -106,6 +114,16 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         get => (bool)GetValue(IsRestModeProperty);
         set => SetValue(IsRestModeProperty, value);
     }
+    public int TonicPitchClass
+    {
+        get => (int)GetValue(TonicPitchClassProperty);
+        set => SetValue(TonicPitchClassProperty, value);
+    }
+    public bool ShowTonic
+    {
+        get => (bool)GetValue(ShowTonicProperty);
+        set => SetValue(ShowTonicProperty, value);
+    }
 
     // ── Event for note placement (so MainWindow can wire undo/redo) ──────────
     public event Action<int, int, int, NoteDuration, int, bool>? NoteClicked;
@@ -123,6 +141,7 @@ public class StaffCanvas : System.Windows.Controls.Canvas
     private static readonly Brush GhostBrush;
     private static readonly Brush BeatHighlightBrush;
     private static readonly Pen GhostPen;
+    private static readonly Pen TonicPen;
 
     static StaffCanvas()
     {
@@ -143,6 +162,9 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         var beatColor = Color.FromArgb(13, 0xFF, 0xFF, 0xFF);
         BeatHighlightBrush = new SolidColorBrush(beatColor);
         BeatHighlightBrush.Freeze();
+
+        TonicPen = new Pen(new SolidColorBrush(Color.FromRgb(0xB8, 0x78, 0x00)), 1.0);
+        TonicPen.Freeze();
     }
 
     // ── Layout constants ──────────────────────────────────────────────────────
@@ -292,7 +314,11 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         // 9 & 10. Notes from Song model
         DrawNotes(dc, staffStartX, staffTopY, staffCenterY, measureWidth);
 
-        // 11. Ghost note preview
+        // 11. Tonic markers
+        if (ShowTonic)
+            DrawTonicMarkers(dc, staffStartX, staffTopY, staffEndX);
+
+        // 12. Ghost note preview
         if (_mouseOver)
             DrawGhostNote(dc, staffStartX, staffTopY, staffCenterY, measureWidth, h);
     }
@@ -401,6 +427,30 @@ public class StaffCanvas : System.Windows.Controls.Canvas
 
                 slotCursor++;
             }
+        }
+    }
+
+    private void DrawTonicMarkers(DrawingContext dc, double staffStartX, double staffTopY, double staffEndX)
+    {
+        int tonic = TonicPitchClass;
+        // Clef ranges: treble ~48-84, alto ~36-72
+        int midiMin = ClefType == ClefType.Alto ? 36 : 48;
+        int midiMax = ClefType == ClefType.Alto ? 72 : 84;
+
+        double staffCenterY = staffTopY + MeasureLayout.LineSpacing * 2;
+        double limitY = MeasureLayout.LineSpacing * 3; // ±3 line spacings from center
+        double markerX = staffStartX - 20;
+        const double outerR = 7.0;
+        const double innerR = 3.0;
+
+        for (int midi = midiMin; midi <= midiMax; midi++)
+        {
+            if (midi % 12 != tonic) continue;
+            double y = MeasureLayout.GetNoteY(midi, ClefType, staffTopY);
+            if (Math.Abs(y - staffCenterY) > limitY) continue;
+            // Draw bullseye: two concentric circles, no fill
+            dc.DrawEllipse(null, TonicPen, new Point(markerX, y), outerR, outerR);
+            dc.DrawEllipse(null, TonicPen, new Point(markerX, y), innerR, innerR);
         }
     }
 

@@ -33,6 +33,13 @@ public partial class MainWindow : Window
         _song = CreateSong();
         WireSong();
         RegisterNaturalHotkeys();
+        TonicCombo.SelectionChanged += (_, _) =>
+        {
+            int pc = TonicCombo.SelectedIndex;
+            foreach (var s in AllStaves) s.TonicPitchClass = pc;
+        };
+        ShowTonicCheck.Checked += (_, _) => { foreach (var s in AllStaves) s.ShowTonic = true; };
+        ShowTonicCheck.Unchecked += (_, _) => { foreach (var s in AllStaves) s.ShowTonic = false; };
         this.Focus();
     }
 
@@ -296,6 +303,16 @@ public partial class MainWindow : Window
             case Key.Space:
                 if (_isPlaying) Toolbar_Stop(this, new RoutedEventArgs());
                 else Toolbar_Play(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+
+            case Key.V:
+                VibratoCheck.IsChecked = !(VibratoCheck.IsChecked == true);
+                e.Handled = true;
+                break;
+
+            case Key.T:
+                ShowTonicCheck.IsChecked = !(ShowTonicCheck.IsChecked == true);
                 e.Handled = true;
                 break;
 
