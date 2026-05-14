@@ -25,7 +25,16 @@ public partial class MainWindow : Window
         InitializeComponent();
         _song = CreateSong();
         WireSong();
+        RegisterNaturalHotkeys();
         this.Focus();
+    }
+
+    private void RegisterNaturalHotkeys()
+    {
+        var cmd = new RoutedCommand();
+        CommandBindings.Add(new CommandBinding(cmd, (_, _) => SetAccidental(0)));
+        foreach (var key in new[] { Key.N, Key.D0, Key.NumPad0 })
+            InputBindings.Add(new KeyBinding(cmd, key, ModifierKeys.None));
     }
 
     private void WireSong()
@@ -94,33 +103,6 @@ public partial class MainWindow : Window
         int dSlots = DurationToSlots(duration);
 
         if (startSlot >= pattern.Rows.Count) return;
-
-        // If an existing note-start is at this slot, overwrite pitch/accidental only (preserve duration/continuations)
-        var startRow = pattern.Rows[startSlot];
-        if (startRow.Cells.Count > 0 && startRow.Cells[0].Note != -3)
-        {
-            var existingCell = startRow.Cells[0];
-            // Snapshot for undo
-            var snap = new PatternCell { Note = existingCell.Note, Octave = existingCell.Octave,
-                InstrumentId = existingCell.InstrumentId, Volume = existingCell.Volume,
-                Effects = new Dictionary<int, int>(existingCell.Effects) };
-            _undo.Execute(
-                () =>
-                {
-                    if (isRest) { existingCell.Note = -2; existingCell.Octave = 4; }
-                    else { existingCell.Note = midiNote % 12; existingCell.Octave = midiNote / 12 - 1; }
-                    if (accidental != 0) existingCell.Effects[998] = accidental;
-                    else existingCell.Effects.Remove(998);
-                    staff.InvalidateVisual();
-                },
-                () =>
-                {
-                    existingCell.Note = snap.Note; existingCell.Octave = snap.Octave;
-                    existingCell.Effects = new Dictionary<int, int>(snap.Effects);
-                    staff.InvalidateVisual();
-                });
-            return;
-        }
 
         // Find the range to clear: walk back to find if startSlot is inside an existing note's span
         int clearFrom = startSlot;

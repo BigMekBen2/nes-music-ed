@@ -328,7 +328,7 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         };
         if (step >= 16) return; // barlines already cover whole-note boundaries
 
-        var dashPen = new Pen(new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x5A)), 1.0);
+        var dashPen = new Pen(new SolidColorBrush(Color.FromRgb(0x88, 0x77, 0x00)), 1.0);
         dashPen.DashStyle = new DashStyle(new double[] { 4, 4 }, 0);
 
         double pps = PixelsPerSixteenth;

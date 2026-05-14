@@ -194,14 +194,14 @@
 
                 <!-- Row 4: Accidental | Vibrato -->
                 <Label Grid.Row="4" Grid.Column="0" Content="Accidental:"/>
-                <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="5" Orientation="Horizontal" VerticalAlignment="Center">
                     <RadioButton x:Name="AccNatural" Content="&#x266E; Natural" IsChecked="True" Checked="Accidental_Checked" Tag="0"/>
-                    <RadioButton x:Name="AccSharp"   Content="&#x266F; Sharp" Checked="Accidental_Checked" Tag="1" Margin="8,0,0,0"/>
-                    <RadioButton x:Name="AccFlat"    Content="&#x266D; Flat" Checked="Accidental_Checked" Tag="-1" Margin="8,0,0,0"/>
+                    <RadioButton x:Name="AccSharp"   Content="&#x266F; Sharp" Checked="Accidental_Checked" Tag="1" Margin="12,0,0,0"/>
+                    <RadioButton x:Name="AccFlat"    Content="&#x266D; Flat" Checked="Accidental_Checked" Tag="-1" Margin="12,0,0,0"/>
                 </StackPanel>
 
                 <!-- Vibrato -->
-                <CheckBox Grid.Row="4" Grid.Column="3" Content="Vibrato" VerticalAlignment="Center"/>
+                <CheckBox Grid.Row="4" Grid.Column="6" Content="Vibrato" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
