@@ -208,17 +208,20 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         double pps = PixelsPerSixteenth;
         int slotIdx = (int)(relX / pps);
 
-        int durationSlots = CurrentDuration switch {
-            NoteDuration.Whole => 16,
-            NoteDuration.Half => 8,
+        // Snap grid: whole=measure-start, half/quarter=quarter-note, eighth=eighth, 16th=16th
+        int snapStep = CurrentDuration switch {
+            NoteDuration.Whole => SlotsPerMeasure,
+            NoteDuration.Half => 4,
             NoteDuration.Quarter => 4,
             NoteDuration.Eighth => 2,
             _ => 1
         };
-        slotIdx = (slotIdx / durationSlots) * durationSlots;
+        int measureIdx = slotIdx / SlotsPerMeasure;
+        int slotInMeasure = slotIdx % SlotsPerMeasure;
+        slotInMeasure = (slotInMeasure / snapStep) * snapStep;
 
-        measure = slotIdx / SlotsPerMeasure;
-        slot = slotIdx % SlotsPerMeasure;
+        measure = measureIdx;
+        slot = slotInMeasure;
         return measure < MeasureCount;
     }
 
@@ -390,9 +393,10 @@ public class StaffCanvas : System.Windows.Controls.Canvas
                     int midiNote = (cell.Octave + 1) * 12 + cell.Note;
                     double ny = MeasureLayout.GetNoteY(midiNote, ClefType, staffTopY);
                     int accidental = cell.Effects.TryGetValue(998, out int accVal) ? accVal : 0;
+                    bool vibrato = cell.Effects.TryGetValue(997, out int vib) && vib == 1;
 
                     NoteGlyphRenderer.DrawLedgerLines(dc, nx, ny, staffTopY, LedgerPen);
-                    NoteGlyphRenderer.DrawNote(dc, nx, ny, duration, accidental, staffCenterY);
+                    NoteGlyphRenderer.DrawNote(dc, nx, ny, duration, accidental, staffCenterY, vibrato: vibrato);
                 }
 
                 slotCursor++;
@@ -418,7 +422,16 @@ public class StaffCanvas : System.Windows.Controls.Canvas
         int slotIdx = (int)(relX / pps);
 
         int durationSlots = DurationToSlots(CurrentDuration);
-        slotIdx = (slotIdx / durationSlots) * durationSlots; // snap to duration boundary
+        int snapStep2 = CurrentDuration switch {
+            NoteDuration.Whole => SlotsPerMeasure,
+            NoteDuration.Half => 4,
+            NoteDuration.Quarter => 4,
+            NoteDuration.Eighth => 2,
+            _ => 1
+        };
+        int measureIdx2 = slotIdx / SlotsPerMeasure;
+        int slotInMeasure2 = (slotIdx % SlotsPerMeasure / snapStep2) * snapStep2;
+        slotIdx = measureIdx2 * SlotsPerMeasure + slotInMeasure2;
 
         int measure = slotIdx / SlotsPerMeasure;
         if (measure >= MeasureCount) return;

@@ -31,10 +31,14 @@ public partial class MainWindow : Window
 
     private void RegisterNaturalHotkeys()
     {
-        var cmd = new RoutedCommand();
-        CommandBindings.Add(new CommandBinding(cmd, (_, _) => SetAccidental(0)));
-        foreach (var key in new[] { Key.N, Key.D0, Key.NumPad0 })
-            InputBindings.Add(new KeyBinding(cmd, key, ModifierKeys.None));
+        // AddHandler with handledEventsToo=true fires even when child controls mark event handled
+        AddHandler(KeyDownEvent, new KeyEventHandler(OnGlobalKeyDown), handledEventsToo: true);
+    }
+
+    private void OnGlobalKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.N or Key.D0 or Key.NumPad0)
+            SetAccidental(0);
     }
 
     private void WireSong()
@@ -50,7 +54,7 @@ public partial class MainWindow : Window
         {
             var capturedStaff = staff;
             capturedStaff.NoteClicked += (m, slot, midi, dur, acc, isRest)
-                => PlaceNote(capturedStaff, m, slot, midi, dur, acc, isRest);
+                => PlaceNote(capturedStaff, m, slot, midi, dur, acc, isRest, VibratoCheck.IsChecked == true);
             capturedStaff.NoteRightClicked += (m, slot)
                 => OnStaffNoteRightClicked(capturedStaff, m, slot);
         }
@@ -92,7 +96,7 @@ public partial class MainWindow : Window
     };
 
     private void PlaceNote(StaffCanvas staff, int measure, int slotInMeasure, int midiNote,
-        NoteDuration duration, int accidental, bool isRest)
+        NoteDuration duration, int accidental, bool isRest, bool vibrato = false)
     {
         int ti = staff.TrackIndex;
         var pattern = _song.Patterns.Find(p => p.TrackIndex == ti && _song.Tracks[ti].OrderList.Contains(p.PatternId));
@@ -140,7 +144,7 @@ public partial class MainWindow : Window
                     pattern.Rows[i].Cells.Clear();
 
                 // Place note
-                SetCell(pattern, startSlot, midiNote, duration, accidental, isRest);
+                SetCell(pattern, startSlot, midiNote, duration, accidental, isRest, vibrato);
 
                 // Mark continuation slots
                 for (int i = startSlot + 1; i < startSlot + dSlots && i < pattern.Rows.Count; i++)
@@ -160,7 +164,7 @@ public partial class MainWindow : Window
     }
 
     private static void SetCell(Pattern pattern, int rowIndex, int midiNote, NoteDuration duration,
-        int accidental, bool isRest)
+        int accidental, bool isRest, bool vibrato = false)
     {
         var row = pattern.Rows[rowIndex];
         PatternCell cell;
@@ -188,10 +192,10 @@ public partial class MainWindow : Window
         }
 
         cell.Effects[999] = (int)duration;
-        if (accidental != 0)
-            cell.Effects[998] = accidental;
-        else
-            cell.Effects.Remove(998);
+        if (accidental != 0) cell.Effects[998] = accidental;
+        else cell.Effects.Remove(998);
+        if (vibrato) cell.Effects[997] = 1;
+        else cell.Effects.Remove(997);
     }
 
     private static void RestoreCell(Pattern pattern, int rowIndex, PatternCell? saved)

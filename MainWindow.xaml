@@ -201,7 +201,7 @@
                 </StackPanel>
 
                 <!-- Vibrato -->
-                <CheckBox Grid.Row="4" Grid.Column="6" Content="Vibrato" VerticalAlignment="Center"/>
+                <CheckBox x:Name="VibratoCheck" Grid.Row="4" Grid.Column="6" Content="Vibrato" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 

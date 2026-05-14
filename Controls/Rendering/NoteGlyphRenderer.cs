@@ -21,7 +21,7 @@ public static class NoteGlyphRenderer
     }
 
     public static void DrawNote(DrawingContext dc, double x, double y, NoteDuration duration,
-        int accidental, double staffCenterY, Brush? overrideBrush = null)
+        int accidental, double staffCenterY, Brush? overrideBrush = null, bool vibrato = false)
     {
         var fill = overrideBrush ?? NoteWhite;
         var pen = overrideBrush != null ? new Pen(overrideBrush, 1.2) : NotePen;
@@ -52,6 +52,16 @@ public static class NoteGlyphRenderer
             DrawFlag(dc, x, y, stemUp, 1, pen);
         else if (duration == NoteDuration.Sixteenth)
             DrawFlag(dc, x, y, stemUp, 2, pen);
+
+        // Vibrato indicator: cyan "~" above note head
+        if (vibrato && overrideBrush == null)
+        {
+            var vft = new FormattedText("~",
+                System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                new Typeface("Consolas"), 10, CyanBrush, 96.0);
+            dc.DrawText(vft, new Point(x - vft.Width / 2, y - hh - 12));
+        }
     }
 
     public static void DrawStem(DrawingContext dc, double x, double y, bool stemUp, Pen pen)
