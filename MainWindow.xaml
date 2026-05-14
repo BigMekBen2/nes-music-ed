@@ -1,0 +1,303 @@
+<Window x:Class="NESMusicEditor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:NESMusicEditor.Controls"
+        Title="NES Music Editor"
+        MinWidth="900" MinHeight="600"
+        Width="1100" Height="720"
+        Background="#0F0F1A"
+        FontFamily="Consolas">
+
+    <Window.Resources>
+        <!-- Section header style -->
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FFE000"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+
+        <!-- ═══ MENU BAR ═══ -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" Click="Menu_Stub"/>
+                <MenuItem Header="_Open..." Click="Menu_Stub"/>
+                <MenuItem Header="_Save" Click="Menu_Stub"/>
+                <MenuItem Header="Save _As..." Click="Menu_Stub"/>
+                <Separator/>
+                <MenuItem Header="E_xit" Click="Menu_Stub"/>
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Undo" Click="Menu_Stub"/>
+                <MenuItem Header="_Redo" Click="Menu_Stub"/>
+                <Separator/>
+                <MenuItem Header="Cu_t" Click="Menu_Stub"/>
+                <MenuItem Header="_Copy" Click="Menu_Stub"/>
+                <MenuItem Header="_Paste" Click="Menu_Stub"/>
+                <MenuItem Header="_Delete" Click="Menu_Stub"/>
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="Zoom _In" Click="Menu_Stub"/>
+                <MenuItem Header="Zoom _Out" Click="Menu_Stub"/>
+                <Separator/>
+                <MenuItem Header="_Piano Roll" Click="Menu_Stub" IsCheckable="True"/>
+                <MenuItem Header="_Notation View" Click="Menu_Stub" IsCheckable="True" IsChecked="True"/>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About NES Music Editor" Click="Menu_Stub"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- ═══ TOOLBAR ═══ -->
+        <Border DockPanel.Dock="Top"
+                Background="#0D0D1F"
+                BorderBrush="#3A3A6A"
+                BorderThickness="0,0,0,1"
+                Padding="6,4">
+            <StackPanel Orientation="Horizontal">
+                <!-- File ops -->
+                <Button Style="{StaticResource RetroButton}" Content="[NEW]" Click="Toolbar_Stub" ToolTip="New Song"/>
+                <Button Style="{StaticResource RetroButton}" Content="[OPEN]" Click="Toolbar_Stub" ToolTip="Open Song" Margin="2,0,0,0"/>
+                <Button Style="{StaticResource RetroButton}" Content="[SAVE]" Click="Toolbar_Stub" ToolTip="Save Song" Margin="2,0,0,0"/>
+
+                <!-- Separator -->
+                <Rectangle Width="1" Fill="#3A3A6A" Margin="8,2"/>
+
+                <!-- Playback -->
+                <Button Style="{StaticResource AccentButton}" Content="&#x25BA; PLAY" Click="Toolbar_Stub" ToolTip="Play"/>
+                <Button Style="{StaticResource StopButton}" Content="&#x25FC; STOP" Click="Toolbar_Stub" ToolTip="Stop" Margin="2,0,0,0"/>
+
+                <!-- Separator -->
+                <Rectangle Width="1" Fill="#3A3A6A" Margin="8,2"/>
+
+                <!-- Export -->
+                <Button Style="{StaticResource RetroButton}" Content="[EXPORT]" Click="Toolbar_Stub" ToolTip="Export to NSF/MIDI" Margin="0,0,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ STATUS BAR ═══ -->
+        <Border DockPanel.Dock="Bottom"
+                Background="#0D0D1F"
+                BorderBrush="#3A3A6A"
+                BorderThickness="0,1,0,0"
+                Padding="8,4">
+            <DockPanel>
+                <!-- Right side playback buttons -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Style="{StaticResource AccentButton}" Content="&#x25BA;" Click="Toolbar_Stub"
+                            ToolTip="Play" Width="28" Padding="0"/>
+                    <Button Style="{StaticResource StopButton}" Content="&#x25FC;" Click="Toolbar_Stub"
+                            ToolTip="Stop" Width="28" Padding="0" Margin="2,0,0,0"/>
+                </StackPanel>
+                <!-- Status text -->
+                <TextBlock VerticalAlignment="Center" Foreground="#7070A0" FontFamily="Consolas" FontSize="11">
+                    <Run Foreground="#39FF14" Text="Ready"/>
+                    <Run Text="  |  "/>
+                    <Run Text="Tempo: "/>
+                    <Run Foreground="#FFE000" Text="120 BPM"/>
+                </TextBlock>
+            </DockPanel>
+        </Border>
+
+        <!-- ═══ PROPERTIES PANEL ═══ -->
+        <Border DockPanel.Dock="Bottom"
+                Background="#1A1A2E"
+                BorderBrush="#3A3A6A"
+                BorderThickness="0,1,0,0"
+                Padding="8,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="6"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Row 0: section header -->
+                <TextBlock Grid.Row="0" Grid.ColumnSpan="16"
+                           Style="{StaticResource SectionLabel}"
+                           Text="PROPERTIES"/>
+
+                <!-- Row 2: controls -->
+                <!-- Note Pitch -->
+                <Label Grid.Row="2" Grid.Column="0" Content="Pitch:"/>
+                <ComboBox Grid.Row="2" Grid.Column="1" SelectedIndex="0">
+                    <ComboBoxItem>C4</ComboBoxItem>
+                    <ComboBoxItem>D4</ComboBoxItem>
+                    <ComboBoxItem>E4</ComboBoxItem>
+                    <ComboBoxItem>F4</ComboBoxItem>
+                    <ComboBoxItem>G4</ComboBoxItem>
+                    <ComboBoxItem>A4</ComboBoxItem>
+                    <ComboBoxItem>B4</ComboBoxItem>
+                </ComboBox>
+
+                <!-- Duration -->
+                <Label Grid.Row="2" Grid.Column="3" Content="Duration:"/>
+                <ComboBox Grid.Row="2" Grid.Column="4" SelectedIndex="1">
+                    <ComboBoxItem>Whole</ComboBoxItem>
+                    <ComboBoxItem>Half</ComboBoxItem>
+                    <ComboBoxItem>Quarter</ComboBoxItem>
+                    <ComboBoxItem>Eighth</ComboBoxItem>
+                    <ComboBoxItem>16th</ComboBoxItem>
+                </ComboBox>
+
+                <!-- Instrument -->
+                <Label Grid.Row="2" Grid.Column="6" Content="Instrument:"/>
+                <ComboBox Grid.Row="2" Grid.Column="7" SelectedIndex="0">
+                    <ComboBoxItem>Lead Square</ComboBoxItem>
+                    <ComboBoxItem>Bass Triangle</ComboBoxItem>
+                    <ComboBoxItem>Snare Noise</ComboBoxItem>
+                </ComboBox>
+
+                <!-- Volume -->
+                <Label Grid.Row="2" Grid.Column="9" Content="Volume:"/>
+                <StackPanel Grid.Row="2" Grid.Column="10" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Slider Minimum="0" Maximum="15" Value="12" Width="80"
+                            VerticalAlignment="Center" SmallChange="1" LargeChange="3"
+                            TickFrequency="1" IsSnapToTickEnabled="True"/>
+                    <TextBlock Text="12" Foreground="#FFE000" FontFamily="Consolas" FontSize="11"
+                               VerticalAlignment="Center" Margin="4,0,0,0" Width="18"/>
+                </StackPanel>
+
+                <!-- Sharp/Flat -->
+                <Label Grid.Row="2" Grid.Column="12" Content="Accidental:"/>
+                <StackPanel Grid.Row="2" Grid.Column="13" Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton Content="&#x266E;" IsChecked="True"/>
+                    <RadioButton Content="&#x266F;"/>
+                    <RadioButton Content="&#x266D;"/>
+                </StackPanel>
+
+                <!-- Vibrato -->
+                <CheckBox Grid.Row="2" Grid.Column="15" Content="Vibrato" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- ═══ MAIN CONTENT AREA ═══ -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" MinWidth="100" MaxWidth="220"/>
+                <ColumnDefinition Width="4"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ── INSTRUMENT LIBRARY (left panel) ── -->
+            <Border Grid.Column="0"
+                    Background="#1A1A2E"
+                    BorderBrush="#3A3A6A"
+                    BorderThickness="0,0,1,0">
+                <DockPanel Margin="8">
+                    <!-- Header -->
+                    <TextBlock DockPanel.Dock="Top"
+                               Style="{StaticResource SectionLabel}"
+                               Text="INSTRUMENTS"/>
+
+                    <!-- New Instrument button pinned to bottom -->
+                    <Button DockPanel.Dock="Bottom"
+                            Style="{StaticResource RetroButton}"
+                            Content="[+ New Instrument]"
+                            Click="Toolbar_Stub"
+                            Margin="0,6,0,0"
+                            HorizontalAlignment="Stretch"
+                            Foreground="#39FF14"
+                            BorderBrush="#39FF14"/>
+
+                    <!-- Instrument list -->
+                    <StackPanel>
+                        <Button Style="{StaticResource InstrumentButton}"
+                                Content="&#x25BA; Lead Square"
+                                Click="Toolbar_Stub"
+                                Foreground="#00FFFF"
+                                BorderBrush="#00FFFF"/>
+                        <Button Style="{StaticResource InstrumentButton}"
+                                Content="  Bass Triangle"
+                                Click="Toolbar_Stub"/>
+                        <Button Style="{StaticResource InstrumentButton}"
+                                Content="  Snare Noise"
+                                Click="Toolbar_Stub"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- ── SPLITTER ── -->
+            <GridSplitter Grid.Column="1"
+                          Width="4"
+                          HorizontalAlignment="Stretch"
+                          Background="#3A3A6A"
+                          ShowsPreview="True"/>
+
+            <!-- ── NOTATION EDITOR (right panel) ── -->
+            <DockPanel Grid.Column="2">
+                <!-- Editor header -->
+                <Border DockPanel.Dock="Top"
+                        Background="#0D0D1F"
+                        BorderBrush="#3A3A6A"
+                        BorderThickness="0,0,0,1"
+                        Padding="8,3">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Left"
+                                   Style="{StaticResource SectionLabel}"
+                                   Text="NOTATION EDITOR"
+                                   VerticalAlignment="Center"
+                                   Margin="0"/>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Label Content="Measures:"/>
+                            <ComboBox Width="50" SelectedIndex="1">
+                                <ComboBoxItem>8</ComboBoxItem>
+                                <ComboBoxItem>16</ComboBoxItem>
+                                <ComboBoxItem>32</ComboBoxItem>
+                                <ComboBoxItem>64</ComboBoxItem>
+                            </ComboBox>
+                            <Label Content="Zoom:" Margin="8,0,0,0"/>
+                            <Slider Minimum="0.5" Maximum="3.0" Value="1.0" Width="60"
+                                    VerticalAlignment="Center" SmallChange="0.1"/>
+                        </StackPanel>
+                        <TextBlock/>
+                    </DockPanel>
+                </Border>
+
+                <!-- Scrollable staff area -->
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled"
+                              Background="#0F0F1A"
+                              PanningMode="HorizontalOnly">
+                    <StackPanel Orientation="Vertical" MinWidth="800">
+                        <!-- Square 1 -->
+                        <controls:StaffCanvas ChannelName="Square 1" MeasureCount="16"
+                                              Height="60" MinWidth="800"/>
+                        <!-- Square 2 -->
+                        <controls:StaffCanvas ChannelName="Square 2" MeasureCount="16"
+                                              Height="60" MinWidth="800"/>
+                        <!-- Triangle -->
+                        <controls:StaffCanvas ChannelName="Triangle" MeasureCount="16"
+                                              Height="60" MinWidth="800"/>
+                        <!-- Noise -->
+                        <controls:StaffCanvas ChannelName="Noise" MeasureCount="16"
+                                              Height="60" MinWidth="800"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Grid>
+
+    </DockPanel>
+</Window>
