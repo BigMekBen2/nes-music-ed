@@ -13,17 +13,19 @@ using NESMusicEditor.Controls.Rendering;
 using NESMusicEditor.Editing;
 using NESMusicEditor.Models;
 using NESMusicEditor.Synthesis;
+using NESMusicEditor.IO;
 
 namespace NESMusicEditor;
 
 public partial class MainWindow : Window
 {
-    private readonly Song _song;
+    private Song _song;
     private readonly UndoRedoManager _undo = new();
     private bool _isPlaying;
     private bool _isRestMode;
     private MediaPlayer? _player;
     private string? _tempWavPath;
+    private string? _currentFilePath;
 
     private StaffCanvas[] AllStaves => new[] { StaffSquare1, StaffSquare2, StaffTriangle, StaffNoise };
 
@@ -55,6 +57,8 @@ public partial class MainWindow : Window
             SetAccidental(0);
     }
 
+    private bool _staffsWired = false;
+
     private void WireSong()
     {
         StaffSquare1.Song = _song;
@@ -63,6 +67,9 @@ public partial class MainWindow : Window
         StaffNoise.Song = _song;
 
         StaffTriangle.ClefType = ClefType.Alto;
+
+        if (_staffsWired) return;
+        _staffsWired = true;
 
         foreach (var staff in AllStaves)
         {
@@ -285,6 +292,9 @@ public partial class MainWindow : Window
         if (ctrl && e.Key == Key.Z) { _undo.Undo(); foreach (var s in AllStaves) s.InvalidateVisual(); e.Handled = true; return; }
         if (ctrl && e.Key == Key.Y) { _undo.Redo(); foreach (var s in AllStaves) s.InvalidateVisual(); e.Handled = true; return; }
         if (ctrl && shift && e.Key == Key.Z) { _undo.Redo(); foreach (var s in AllStaves) s.InvalidateVisual(); e.Handled = true; return; }
+        if (ctrl && e.Key == Key.S) { Menu_Save(this, new RoutedEventArgs()); e.Handled = true; return; }
+        if (ctrl && e.Key == Key.O) { Menu_Open(this, new RoutedEventArgs()); e.Handled = true; return; }
+        if (ctrl && e.Key == Key.N) { Menu_New(this, new RoutedEventArgs()); e.Handled = true; return; }
 
         switch (e.Key)
         {
@@ -381,6 +391,63 @@ public partial class MainWindow : Window
 
     private void Menu_Stub(object sender, RoutedEventArgs e) { }
     private void Toolbar_Stub(object sender, RoutedEventArgs e) { }
+
+    private void Menu_New(object sender, RoutedEventArgs e)
+    {
+        _song = CreateSong();
+        _currentFilePath = null;
+        WireSong();
+        foreach (var s in AllStaves) s.InvalidateVisual();
+        Title = "NES Music Editor";
+        StatusRun.Text = "New song";
+    }
+
+    private void Menu_Open(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog { Filter = "FTM Files|*.ftm", DefaultExt = ".ftm" };
+        if (dlg.ShowDialog() != true) return;
+        try
+        {
+            _song = FtmReader.Read(dlg.FileName);
+            _currentFilePath = dlg.FileName;
+            WireSong();
+            foreach (var s in AllStaves) s.InvalidateVisual();
+            Title = $"NES Music Editor — {Path.GetFileName(dlg.FileName)}";
+            StatusRun.Text = $"Opened: {Path.GetFileName(dlg.FileName)}";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to open file:\n{ex.Message}", "Open Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void Menu_Save(object sender, RoutedEventArgs e)
+    {
+        if (_currentFilePath == null) { Menu_SaveAs(sender, e); return; }
+        SaveToPath(_currentFilePath);
+    }
+
+    private void Menu_SaveAs(object sender, RoutedEventArgs e)
+    {
+        var dlg = new SaveFileDialog { Filter = "FTM Files|*.ftm", DefaultExt = ".ftm", FileName = _song.Title };
+        if (dlg.ShowDialog() != true) return;
+        _currentFilePath = dlg.FileName;
+        SaveToPath(_currentFilePath);
+        Title = $"NES Music Editor — {Path.GetFileName(_currentFilePath)}";
+    }
+
+    private void SaveToPath(string path)
+    {
+        try
+        {
+            FtmWriter.Write(_song, path);
+            StatusRun.Text = $"Saved: {Path.GetFileName(path)}";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to save file:\n{ex.Message}", "Save Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 
     private async void Toolbar_Export(object sender, RoutedEventArgs e)
     {

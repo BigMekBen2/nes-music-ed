@@ -25,10 +25,10 @@
         <!-- ═══ MENU BAR ═══ -->
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="_New" Click="Menu_Stub"/>
-                <MenuItem Header="_Open..." Click="Menu_Stub"/>
-                <MenuItem Header="_Save" Click="Menu_Stub"/>
-                <MenuItem Header="Save _As..." Click="Menu_Stub"/>
+                <MenuItem Header="_New" Click="Menu_New" InputGestureText="Ctrl+N"/>
+                <MenuItem Header="_Open..." Click="Menu_Open" InputGestureText="Ctrl+O"/>
+                <MenuItem Header="_Save" Click="Menu_Save" InputGestureText="Ctrl+S"/>
+                <MenuItem Header="Save _As..." Click="Menu_SaveAs"/>
                 <Separator/>
                 <MenuItem Header="E_xit" Click="Menu_Stub"/>
             </MenuItem>
@@ -61,9 +61,9 @@
                 Padding="6,4">
             <StackPanel Orientation="Horizontal">
                 <!-- File ops -->
-                <Button Style="{StaticResource RetroButton}" Content="[NEW]" Click="Toolbar_Stub" ToolTip="New Song"/>
-                <Button Style="{StaticResource RetroButton}" Content="[OPEN]" Click="Toolbar_Stub" ToolTip="Open Song" Margin="2,0,0,0"/>
-                <Button Style="{StaticResource RetroButton}" Content="[SAVE]" Click="Toolbar_Stub" ToolTip="Save Song" Margin="2,0,0,0"/>
+                <Button Style="{StaticResource RetroButton}" Content="[NEW]" Click="Menu_New" ToolTip="New Song"/>
+                <Button Style="{StaticResource RetroButton}" Content="[OPEN]" Click="Menu_Open" ToolTip="Open Song" Margin="2,0,0,0"/>
+                <Button Style="{StaticResource RetroButton}" Content="[SAVE]" Click="Menu_Save" ToolTip="Save Song" Margin="2,0,0,0"/>
 
                 <!-- Separator -->
                 <Rectangle Width="1" Fill="#3A3A6A" Margin="8,2"/>

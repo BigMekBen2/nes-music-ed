@@ -114,6 +114,7 @@ public static class FtmReader
             var pattern = new Pattern
             {
                 PatternId = br.ReadInt32(),
+                TrackIndex = br.ReadInt32(),
                 RowCount = br.ReadInt32(),
             };
             for (int r = 0; r < pattern.RowCount; r++)

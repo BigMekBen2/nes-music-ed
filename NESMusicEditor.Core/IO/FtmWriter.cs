@@ -94,6 +94,7 @@ public static class FtmWriter
         foreach (var pattern in song.Patterns)
         {
             bw.Write(pattern.PatternId);
+            bw.Write(pattern.TrackIndex);
             bw.Write(pattern.RowCount);
             foreach (var row in pattern.Rows)
             {
